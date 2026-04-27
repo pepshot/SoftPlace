@@ -10,4 +10,9 @@ var (
 	ErrInvalidCount     = errors.New("количество должно быть больше 0")
 	ErrExternalService  = errors.New("ошибка внешнего сервиса")
 	ErrInvalidDate      = errors.New("некорректная дата")
+
+	ErrPasswordMismatch   = errors.New("пароли не совпадают")
+	ErrLoginAlreadyUsed   = errors.New("логин уже используется")
+	ErrEmailAlreadyUsed   = errors.New("email уже используется")
+	ErrInvalidCredentials = errors.New("неверный логин или пароль")
 )
