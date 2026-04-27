@@ -1,4 +1,4 @@
-package models
+package model
 
 import (
 	"time"
@@ -7,7 +7,7 @@ import (
 )
 
 type Shipment struct {
-	Id         uuid.UUID
+	ID         uuid.UUID
 	CustomerID uuid.UUID
 	Code       string
 	Date       time.Time
