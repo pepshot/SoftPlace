@@ -1,4 +1,4 @@
-package calculator
+package helpers
 
 type PriceItem struct {
 	Price float64
