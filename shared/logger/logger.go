@@ -6,26 +6,22 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/pepshot/SoftPlace/shared/config"
 )
 
 type Logger struct {
-	*SlogWrapper
-	closers []io.Closer
-}
-
-type SlogWrapper struct {
 	*slog.Logger
+	closers []io.Closer
 }
 
 func New(cfg config.LoggerConfig, serviceName string) (*Logger, error) {
 	level := parseLevel(cfg.Level)
 
-	writer, closers, err := buildWriter(cfg)
+	writer, closers, err := buildWriter(cfg, serviceName)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +38,9 @@ func New(cfg config.LoggerConfig, serviceName string) (*Logger, error) {
 			}
 
 			if attr.Key == slog.TimeKey {
-				attr.Value = slog.StringValue(attr.Value.Time().Format("2006-01-02 15:04:05"))
+				attr.Value = slog.StringValue(
+					attr.Value.Time().Format("2006-01-02 15:04:05"),
+				)
 			}
 
 			return attr
@@ -65,9 +63,7 @@ func New(cfg config.LoggerConfig, serviceName string) (*Logger, error) {
 	)
 
 	return &Logger{
-		SlogWrapper: &SlogWrapper{
-			Logger: baseLogger,
-		},
+		Logger:  baseLogger,
 		closers: closers,
 	}, nil
 }
@@ -99,7 +95,10 @@ func parseLevel(level string) slog.Level {
 	}
 }
 
-func buildWriter(cfg config.LoggerConfig) (io.Writer, []io.Closer, error) {
+func buildWriter(
+	cfg config.LoggerConfig,
+	serviceName string,
+) (io.Writer, []io.Closer, error) {
 	writers := make([]io.Writer, 0)
 	closers := make([]io.Closer, 0)
 
@@ -112,7 +111,9 @@ func buildWriter(cfg config.LoggerConfig) (io.Writer, []io.Closer, error) {
 			writers = append(writers, os.Stderr)
 
 		case "file":
-			file, err := openLogFile(cfg.FilePath)
+			filePath := buildLogFilePath(cfg, serviceName)
+
+			file, err := openLogFile(filePath)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -132,6 +133,28 @@ func buildWriter(cfg config.LoggerConfig) (io.Writer, []io.Closer, error) {
 	return io.MultiWriter(writers...), closers, nil
 }
 
+func buildLogFilePath(cfg config.LoggerConfig, serviceName string) string {
+	if strings.TrimSpace(cfg.FilePath) != "" {
+		return cfg.FilePath
+	}
+
+	fileDir := cfg.FileDir
+	if strings.TrimSpace(fileDir) == "" {
+		fileDir = "logs"
+	}
+
+	filePrefix := cfg.FilePrefix
+	if strings.TrimSpace(filePrefix) == "" {
+		filePrefix = serviceName
+	}
+
+	currentDate := time.Now().Format("2006-01-02")
+
+	fileName := fmt.Sprintf("%s-%s.log", filePrefix, currentDate)
+
+	return filepath.Join(fileDir, fileName)
+}
+
 func openLogFile(path string) (*os.File, error) {
 	dir := filepath.Dir(path)
 
@@ -147,11 +170,6 @@ func openLogFile(path string) (*os.File, error) {
 }
 
 func formatSource(source *slog.Source) string {
-	_, fileName, line, ok := runtime.Caller(0)
-	_ = fileName
-	_ = line
-	_ = ok
-
 	shortFile := source.File
 
 	parts := strings.Split(source.File, string(os.PathSeparator))
