@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/pepshot/SoftPlace/services/customer-service/internal/repository"
 
 	"github.com/pepshot/SoftPlace/services/customer-service/internal/dto"
 	"github.com/pepshot/SoftPlace/services/customer-service/internal/helpers"
@@ -17,15 +18,17 @@ type FurnitureService struct {
 	furnitureRepo       FurnitureRepository
 	furnitureModuleRepo FurnitureModuleRepository
 	supplierClient      SupplierClient
+	txManager           TransactionManager
 	logger              *logger.Logger
 }
 
 func NewFurnitureService(furnitureRepo FurnitureRepository, furnitureModuleRepo FurnitureModuleRepository,
-	supplierClient SupplierClient, logger *logger.Logger) *FurnitureService {
+	supplierClient SupplierClient, txManager TransactionManager, logger *logger.Logger) *FurnitureService {
 	return &FurnitureService{
 		furnitureRepo:       furnitureRepo,
 		furnitureModuleRepo: furnitureModuleRepo,
 		supplierClient:      supplierClient,
+		txManager:           txManager,
 		logger:              logger,
 	}
 }
@@ -116,35 +119,36 @@ func (s *FurnitureService) Create(ctx context.Context, req dto.FurnitureRequest)
 		})
 	}
 
-	totalPrice := helpers.CalculateTotalPrice(priceItems)
-
 	if err := s.supplierClient.ReserveModules(ctx, moduleItems); err != nil {
 		s.logger.Error("failed to reserve modules", "error", err)
 		return uuid.Nil, err
 	}
 
-	furniture := model.Furniture{
-		ID:         furnitureID,
-		Name:       req.Name,
-		Code:       req.Code,
-		Price:      totalPrice,
-		StockCount: 1,
-	}
+	totalPrice := helpers.CalculateTotalPrice(priceItems)
 
-	if err := s.furnitureRepo.Create(ctx, furniture); err != nil {
-		s.logger.Error("failed to create furniture", "error", err)
+	err := s.txManager.RunInTx(ctx, func(ctx context.Context, tx repository.DBExecutor) error {
+		furniture := model.Furniture{
+			ID:         furnitureID,
+			Name:       req.Name,
+			Code:       req.Code,
+			Price:      totalPrice,
+			StockCount: 1,
+		}
 
+		if err := s.furnitureRepo.CreateTx(ctx, tx, furniture); err != nil {
+			return err
+		}
+
+		if err := s.furnitureModuleRepo.CreateManyTx(ctx, tx, relationItems); err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
 		_ = s.supplierClient.ReleaseModules(ctx, moduleItems)
-
-		return uuid.Nil, err
-	}
-
-	if err := s.furnitureModuleRepo.CreateMany(ctx, relationItems); err != nil {
-		s.logger.Error("failed to create furniture-module relations", "error", err)
-
-		_ = s.supplierClient.ReleaseModules(ctx, moduleItems)
-		_ = s.furnitureRepo.Delete(ctx, furnitureID)
-
+		s.logger.Error("failed to create furniture transaction", "error", err)
 		return uuid.Nil, err
 	}
 
@@ -164,38 +168,22 @@ func (s *FurnitureService) Update(ctx context.Context, id uuid.UUID, req dto.Fur
 		return ErrEmptyComposition
 	}
 
-	oldFurniture, err := s.furnitureRepo.GetByID(ctx, id)
-	if err != nil {
-		s.logger.Error(
-			"failed to get old furniture",
-			"furnitureID", id,
-			"error", err,
-		)
-
-		return err
-	}
-
 	oldRelations, err := s.furnitureModuleRepo.GetByFurnitureID(ctx, id)
 	if err != nil {
-		s.logger.Error(
-			"failed to get old furniture-module relations",
-			"furnitureID", id,
-			"error", err,
-		)
-
+		s.logger.Error("failed to get old furniture-module relations", "furnitureID", id, "error", err)
 		return err
 	}
 
-	oldModuleItems := make([]ModuleItem, 0, len(oldRelations))
+	oldStockItems := make([]helpers.StockItem, 0, len(oldRelations))
 
 	for _, item := range oldRelations {
-		oldModuleItems = append(oldModuleItems, ModuleItem{
-			ModuleID: item.ModuleID.String(),
-			Count:    item.Count,
+		oldStockItems = append(oldStockItems, helpers.StockItem{
+			ID:    item.ModuleID,
+			Count: item.Count,
 		})
 	}
 
-	newModuleItems := make([]ModuleItem, 0, len(req.Modules))
+	newStockItems := make([]helpers.StockItem, 0, len(req.Modules))
 	newRelations := make([]relations.FurnitureModule, 0, len(req.Modules))
 	priceItems := make([]helpers.PriceItem, 0, len(req.Modules))
 
@@ -209,31 +197,14 @@ func (s *FurnitureService) Update(ctx context.Context, id uuid.UUID, req dto.Fur
 			return ErrInvalidID
 		}
 
-		module, err := s.supplierClient.GetModule(ctx, item.ModuleID)
+		moduleInfo, err := s.supplierClient.GetModule(ctx, item.ModuleID)
 		if err != nil {
-			s.logger.Error(
-				"failed to get module from supplier-service",
-				"moduleID", item.ModuleID,
-				"error", err,
-			)
-
-			return err
+			return ErrExternalService
 		}
 
-		if module.StockCount < item.Count {
-			s.logger.Warn(
-				"not enough module stock",
-				"moduleID", item.ModuleID,
-				"need", item.Count,
-				"available", module.StockCount,
-			)
-
-			return ErrNotEnoughStock
-		}
-
-		newModuleItems = append(newModuleItems, ModuleItem{
-			ModuleID: item.ModuleID,
-			Count:    item.Count,
+		newStockItems = append(newStockItems, helpers.StockItem{
+			ID:    moduleID,
+			Count: item.Count,
 		})
 
 		newRelations = append(newRelations, relations.FurnitureModule{
@@ -243,65 +214,72 @@ func (s *FurnitureService) Update(ctx context.Context, id uuid.UUID, req dto.Fur
 		})
 
 		priceItems = append(priceItems, helpers.PriceItem{
-			Price: module.Price,
+			Price: moduleInfo.Price,
 			Count: item.Count,
 		})
 	}
 
+	toReserveStock, toReleaseStock := helpers.CalculateStockDiff(oldStockItems, newStockItems)
+
+	toReserve := make([]ModuleItem, 0, len(toReserveStock))
+	for _, item := range toReserveStock {
+		toReserve = append(toReserve, ModuleItem{
+			ModuleID: item.ID.String(),
+			Count:    item.Count,
+		})
+	}
+
+	toRelease := make([]ModuleItem, 0, len(toReleaseStock))
+	for _, item := range toReleaseStock {
+		toRelease = append(toRelease, ModuleItem{
+			ModuleID: item.ID.String(),
+			Count:    item.Count,
+		})
+	}
+
+	if err := s.supplierClient.ReserveModules(ctx, toReserve); err != nil {
+		return ErrExternalService
+	}
+
 	totalPrice := helpers.CalculateTotalPrice(priceItems)
 
-	if err := s.supplierClient.ReserveModules(ctx, newModuleItems); err != nil {
-		s.logger.Error("failed to reserve new modules", "furnitureID", id, "error", err)
+	err = s.txManager.RunInTx(ctx, func(ctx context.Context, tx repository.DBExecutor) error {
+		oldFurniture, err := s.furnitureRepo.GetByIDTx(ctx, tx, id)
+		if err != nil {
+			return ErrNotFound
+		}
+
+		updatedFurniture := model.Furniture{
+			ID:         id,
+			Name:       req.Name,
+			Code:       req.Code,
+			Price:      totalPrice,
+			StockCount: oldFurniture.StockCount,
+		}
+
+		if err := s.furnitureRepo.UpdateTx(ctx, tx, updatedFurniture); err != nil {
+			return err
+		}
+
+		if err := s.furnitureModuleRepo.DeleteByFurnitureIDTx(ctx, tx, id); err != nil {
+			return err
+		}
+
+		if err := s.furnitureModuleRepo.CreateManyTx(ctx, tx, newRelations); err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		_ = s.supplierClient.ReleaseModules(ctx, toReserve)
 		return err
 	}
 
-	updatedFurniture := model.Furniture{
-		ID:         id,
-		Name:       req.Name,
-		Code:       req.Code,
-		Price:      totalPrice,
-		StockCount: oldFurniture.StockCount,
-	}
+	_ = s.supplierClient.ReleaseModules(ctx, toRelease)
 
-	if err := s.furnitureRepo.Update(ctx, updatedFurniture); err != nil {
-		s.logger.Error("failed to update furniture", "furnitureID", id, "error", err)
-
-		_ = s.supplierClient.ReleaseModules(ctx, newModuleItems)
-
-		return err
-	}
-
-	if err := s.furnitureModuleRepo.DeleteByFurnitureID(ctx, id); err != nil {
-		s.logger.Error(
-			"failed to delete old furniture-module relations",
-			"furnitureID", id,
-			"error", err,
-		)
-
-		_ = s.supplierClient.ReleaseModules(ctx, newModuleItems)
-
-		return err
-	}
-
-	if err := s.furnitureModuleRepo.CreateMany(ctx, newRelations); err != nil {
-		s.logger.Error(
-			"failed to create new furniture-module relations",
-			"furnitureID", id,
-			"error", err,
-		)
-
-		_ = s.supplierClient.ReleaseModules(ctx, newModuleItems)
-
-		return err
-	}
-
-	_ = s.supplierClient.ReleaseModules(ctx, oldModuleItems)
-
-	s.logger.Info(
-		"furniture updated successfully",
-		"furnitureID", id,
-		"price", totalPrice,
-	)
+	s.logger.Info("furniture updated successfully", "furnitureID", id, "price", totalPrice)
 
 	return nil
 }
@@ -309,30 +287,37 @@ func (s *FurnitureService) Update(ctx context.Context, id uuid.UUID, req dto.Fur
 func (s *FurnitureService) Delete(ctx context.Context, id uuid.UUID) error {
 	s.logger.Info("deleting furniture", "furnitureID", id)
 
-	relationsItems, err := s.furnitureModuleRepo.GetByFurnitureID(ctx, id)
+	oldRelations, err := s.furnitureModuleRepo.GetByFurnitureID(ctx, id)
 	if err != nil {
-		s.logger.Error("failed to get furniture-module relations", "furnitureID", id, "error", err)
 		return err
 	}
 
-	moduleItems := make([]ModuleItem, 0, len(relationsItems))
+	toRelease := make([]ModuleItem, 0, len(oldRelations))
 
-	for _, item := range relationsItems {
-		moduleItems = append(moduleItems, ModuleItem{
+	for _, item := range oldRelations {
+		toRelease = append(toRelease, ModuleItem{
 			ModuleID: item.ModuleID.String(),
 			Count:    item.Count,
 		})
 	}
 
-	if err := s.furnitureModuleRepo.DeleteByFurnitureID(ctx, id); err != nil {
+	err = s.txManager.RunInTx(ctx, func(ctx context.Context, tx repository.DBExecutor) error {
+		if err := s.furnitureModuleRepo.DeleteByFurnitureIDTx(ctx, tx, id); err != nil {
+			return err
+		}
+
+		if err := s.furnitureRepo.DeleteTx(ctx, tx, id); err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
 		return err
 	}
 
-	if err := s.furnitureRepo.Delete(ctx, id); err != nil {
-		return err
-	}
-
-	_ = s.supplierClient.ReleaseModules(ctx, moduleItems)
+	_ = s.supplierClient.ReleaseModules(ctx, toRelease)
 
 	s.logger.Info("furniture deleted successfully", "furnitureID", id)
 

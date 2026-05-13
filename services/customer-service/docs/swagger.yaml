@@ -1,0 +1,803 @@
+basePath: /api/v1
+definitions:
+  dto.AuthCustomerResponse:
+    properties:
+      customer:
+        $ref: '#/definitions/dto.CustomerResponse'
+      token:
+        type: string
+    type: object
+  dto.CustomerResponse:
+    properties:
+      email:
+        type: string
+      id:
+        type: string
+      login:
+        type: string
+    type: object
+  dto.FurnitureModuleItem:
+    properties:
+      count:
+        minimum: 1
+        type: integer
+      moduleID:
+        type: string
+    required:
+    - count
+    - moduleID
+    type: object
+  dto.FurnitureRequest:
+    properties:
+      code:
+        maxLength: 20
+        type: string
+      modules:
+        items:
+          $ref: '#/definitions/dto.FurnitureModuleItem'
+        minItems: 1
+        type: array
+      name:
+        maxLength: 100
+        type: string
+    required:
+    - code
+    - modules
+    - name
+    type: object
+  dto.FurnitureResponse:
+    properties:
+      code:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      price:
+        type: number
+      stockCount:
+        type: integer
+    type: object
+  dto.GarnitureFurnitureItem:
+    properties:
+      count:
+        minimum: 1
+        type: integer
+      furnitureId:
+        type: string
+    required:
+    - count
+    - furnitureId
+    type: object
+  dto.GarnitureRequest:
+    properties:
+      code:
+        maxLength: 20
+        type: string
+      furniture:
+        items:
+          $ref: '#/definitions/dto.GarnitureFurnitureItem'
+        minItems: 1
+        type: array
+      name:
+        maxLength: 100
+        type: string
+    required:
+    - code
+    - furniture
+    - name
+    type: object
+  dto.GarnitureResponse:
+    properties:
+      code:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      price:
+        type: number
+      stockCount:
+        type: integer
+    type: object
+  dto.LoginCustomerRequest:
+    properties:
+      login:
+        type: string
+      password:
+        type: string
+    required:
+    - login
+    - password
+    type: object
+  dto.RegisterCustomerRequest:
+    properties:
+      confirmPassword:
+        type: string
+      email:
+        maxLength: 100
+        type: string
+      login:
+        maxLength: 50
+        minLength: 3
+        type: string
+      password:
+        maxLength: 50
+        minLength: 6
+        type: string
+    required:
+    - confirmPassword
+    - email
+    - login
+    - password
+    type: object
+  dto.ShipmentGarnitureItem:
+    properties:
+      count:
+        minimum: 1
+        type: integer
+      garnitureId:
+        type: string
+    required:
+    - count
+    - garnitureId
+    type: object
+  dto.ShipmentRequest:
+    properties:
+      code:
+        maxLength: 20
+        type: string
+      date:
+        description: 'формат: YYYY-MM-DD'
+        type: string
+      garnitures:
+        items:
+          $ref: '#/definitions/dto.ShipmentGarnitureItem'
+        minItems: 1
+        type: array
+    required:
+    - code
+    - date
+    - garnitures
+    type: object
+  dto.ShipmentResponse:
+    properties:
+      code:
+        type: string
+      date:
+        type: string
+      id:
+        type: string
+      price:
+        type: number
+    type: object
+  httpserver.createResponse:
+    properties:
+      id:
+        type: string
+    type: object
+  httpserver.errorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: Customer service API
+  title: Customer Service API
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Login payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.LoginCustomerRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.AuthCustomerResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+      summary: Login customer
+      tags:
+      - Auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Register payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.RegisterCustomerRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.AuthCustomerResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+      summary: Register customer
+      tags:
+      - Auth
+  /furniture:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.FurnitureResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: List furniture
+      tags:
+      - Furniture
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Furniture payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.FurnitureRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/httpserver.createResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create furniture
+      tags:
+      - Furniture
+  /furniture/{id}:
+    delete:
+      parameters:
+      - description: Furniture ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete furniture
+      tags:
+      - Furniture
+    get:
+      parameters:
+      - description: Furniture ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.FurnitureResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get furniture by ID
+      tags:
+      - Furniture
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Furniture ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Furniture payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.FurnitureRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update furniture
+      tags:
+      - Furniture
+  /garnitures:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.GarnitureResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: List garnitures
+      tags:
+      - Garniture
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Garniture payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.GarnitureRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/httpserver.createResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create garniture
+      tags:
+      - Garniture
+  /garnitures/{id}:
+    delete:
+      parameters:
+      - description: Garniture ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete garniture
+      tags:
+      - Garniture
+    get:
+      parameters:
+      - description: Garniture ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.GarnitureResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get garniture by ID
+      tags:
+      - Garniture
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Garniture ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Garniture payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.GarnitureRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update garniture
+      tags:
+      - Garniture
+  /profile:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.CustomerResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get customer profile
+      tags:
+      - Customer
+  /shipments:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.ShipmentResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: List shipments
+      tags:
+      - Shipment
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Shipment payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ShipmentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/httpserver.createResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create shipment
+      tags:
+      - Shipment
+  /shipments/{id}:
+    delete:
+      parameters:
+      - description: Shipment ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete shipment
+      tags:
+      - Shipment
+    get:
+      parameters:
+      - description: Shipment ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ShipmentResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get shipment by ID
+      tags:
+      - Shipment
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Shipment ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Shipment payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ShipmentRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpserver.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update shipment
+      tags:
+      - Shipment
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

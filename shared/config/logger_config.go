@@ -1,9 +1,11 @@
 package config
 
 type LoggerConfig struct {
-	Level     string
-	Format    string
-	Outputs   []string
-	FilePath  string
-	AddSource bool
+	Level      string
+	Format     string
+	Outputs    []string
+	FilePath   string
+	FileDir    string
+	FilePrefix string
+	AddSource  bool
 }
