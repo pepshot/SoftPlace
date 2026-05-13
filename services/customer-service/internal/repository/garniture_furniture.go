@@ -4,18 +4,17 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/pepshot/SoftPlace/services/customer-service/internal/model/relations"
 	"github.com/pepshot/SoftPlace/shared/logger"
 )
 
 type GarnitureFurnitureRepository struct {
-	db     *pgxpool.Pool
+	db     DBExecutor
 	logger *logger.Logger
 }
 
-func NewGarnitureFurnitureRepository(db *pgxpool.Pool, logger *logger.Logger) *GarnitureFurnitureRepository {
+func NewGarnitureFurnitureRepository(db DBExecutor, logger *logger.Logger) *GarnitureFurnitureRepository {
 	return &GarnitureFurnitureRepository{
 		db:     db,
 		logger: logger,

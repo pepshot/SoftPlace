@@ -46,7 +46,7 @@ func (c *SupplierGrpcClient) Close() error {
 }
 
 func (c *SupplierGrpcClient) GetModule(ctx context.Context, moduleID string) (service.ModuleInfo, error) {
-	c.logger.Debug("sending grpc GetModule request", "moduleID", moduleID)
+	c.logger.Debug("sending gRPC GetModule request", "moduleID", moduleID)
 
 	if moduleID == "" {
 		return service.ModuleInfo{}, errors.New("module id is empty")
@@ -60,7 +60,7 @@ func (c *SupplierGrpcClient) GetModule(ctx context.Context, moduleID string) (se
 	})
 	if err != nil {
 		c.logger.Error(
-			"grpc GetModule request failed",
+			"gRPC GetModule request failed",
 			"moduleID", moduleID,
 			"error", err,
 		)
@@ -77,7 +77,7 @@ func (c *SupplierGrpcClient) GetModule(ctx context.Context, moduleID string) (se
 	}
 
 	c.logger.Debug(
-		"grpc GetModule request completed",
+		"gRPC GetModule request completed",
 		"moduleID", module.ID,
 		"code", module.Code,
 		"stockCount", module.StockCount,
@@ -87,7 +87,7 @@ func (c *SupplierGrpcClient) GetModule(ctx context.Context, moduleID string) (se
 }
 
 func (c *SupplierGrpcClient) ReserveModules(ctx context.Context, items []service.ModuleItem) error {
-	c.logger.Debug("sending grpc ReserveModules request", "itemsCount", len(items))
+	c.logger.Debug("sending gRPC ReserveModules request", "itemsCount", len(items))
 
 	if len(items) == 0 {
 		return errors.New("module items cannot be empty")
@@ -118,7 +118,7 @@ func (c *SupplierGrpcClient) ReserveModules(ctx context.Context, items []service
 	response, err := c.client.ReserveModules(ctx, request)
 	if err != nil {
 		c.logger.Error(
-			"grpc ReserveModules request failed",
+			"gRPC ReserveModules request failed",
 			"itemsCount", len(items),
 			"error", err,
 		)
@@ -128,7 +128,7 @@ func (c *SupplierGrpcClient) ReserveModules(ctx context.Context, items []service
 
 	if !response.Success {
 		c.logger.Warn(
-			"grpc ReserveModules request rejected",
+			"gRPC ReserveModules request rejected",
 			"message", response.Message,
 		)
 
@@ -139,13 +139,13 @@ func (c *SupplierGrpcClient) ReserveModules(ctx context.Context, items []service
 		return errors.New(response.Message)
 	}
 
-	c.logger.Debug("grpc ReserveModules request completed", "itemsCount", len(items))
+	c.logger.Debug("gRPC ReserveModules request completed", "itemsCount", len(items))
 
 	return nil
 }
 
 func (c *SupplierGrpcClient) ReleaseModules(ctx context.Context, items []service.ModuleItem) error {
-	c.logger.Debug("sending grpc ReleaseModules request", "itemsCount", len(items))
+	c.logger.Debug("sending gRPC ReleaseModules request", "itemsCount", len(items))
 
 	if len(items) == 0 {
 		return nil
@@ -176,7 +176,7 @@ func (c *SupplierGrpcClient) ReleaseModules(ctx context.Context, items []service
 	response, err := c.client.ReleaseModules(ctx, request)
 	if err != nil {
 		c.logger.Error(
-			"grpc ReleaseModules request failed",
+			"gRPC ReleaseModules request failed",
 			"itemsCount", len(items),
 			"error", err,
 		)
@@ -186,7 +186,7 @@ func (c *SupplierGrpcClient) ReleaseModules(ctx context.Context, items []service
 
 	if !response.Success {
 		c.logger.Warn(
-			"grpc ReleaseModules request rejected",
+			"gRPC ReleaseModules request rejected",
 			"message", response.Message,
 		)
 
@@ -197,7 +197,7 @@ func (c *SupplierGrpcClient) ReleaseModules(ctx context.Context, items []service
 		return errors.New(response.Message)
 	}
 
-	c.logger.Debug("grpc ReleaseModules request completed", "itemsCount", len(items))
+	c.logger.Debug("gRPC ReleaseModules request completed", "itemsCount", len(items))
 
 	return nil
 }
