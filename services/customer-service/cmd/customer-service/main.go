@@ -84,23 +84,41 @@ func main() {
 		Handler: router,
 	}
 
+	serverErr := make(chan error, 1)
 	go func() {
 		if err := startServer(server, cfg.HTTP, log); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Error("server error", "error", err)
+			serverErr <- err
+			return
 		}
+		serverErr <- nil
 	}()
 
 	log.Info("customer-service started", "addr", server.Addr)
 
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	select {
+	case err := <-serverErr:
+		if err != nil {
+			log.Error("server exited unexpectedly", "error", err)
+		}
+		return
+	case <-ctx.Done():
+	}
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		log.Error("server shutdown failed", "error", err)
+		if closeErr := server.Close(); closeErr != nil {
+			log.Error("forced server close failed", "error", closeErr)
+		}
+	}
+
+	if err := <-serverErr; err != nil && !errors.Is(err, http.ErrServerClosed) {
+		log.Error("server exited unexpectedly", "error", err)
 	}
 }
 
