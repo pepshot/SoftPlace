@@ -1,0 +1,300 @@
+swagger: '2.0'
+info:
+  title: Supplier Service API
+  description: Supplier service API
+  version: '1.0'
+basePath: /api/v1
+schemes:
+  - http
+  - https
+consumes:
+  - application/json
+produces:
+  - application/json
+
+securityDefinitions:
+  BearerAuth:
+    type: apiKey
+    name: Authorization
+    in: header
+
+paths:
+  /auth/register:
+    post:
+      tags:
+        - Auth
+      summary: Register supplier
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/RegisterSupplierRequest'
+      responses:
+        '200':
+          description: Supplier registered successfully
+          schema:
+            $ref: '#/definitions/AuthSupplierResponse'
+        '400':
+          description: Bad request
+
+  /auth/login:
+    post:
+      tags:
+        - Auth
+      summary: Login supplier
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/LoginSupplierRequest'
+      responses:
+        '200':
+          description: Login successful
+          schema:
+            $ref: '#/definitions/AuthSupplierResponse'
+        '400':
+          description: Bad request
+
+  /profile:
+    get:
+      tags:
+        - Profile
+      summary: Get supplier profile
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Supplier profile
+          schema:
+            $ref: '#/definitions/SupplierResponse'
+        '401':
+          description: Unauthorized
+
+  /modules:
+    get:
+      tags:
+        - Modules
+      summary: List all modules
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of modules
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/ModuleResponse'
+
+    post:
+      tags:
+        - Modules
+      summary: Create new module
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/ModuleRequest'
+      responses:
+        '200':
+          description: Module created
+
+  /materials:
+    get:
+      tags:
+        - Materials
+      summary: List all materials
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of materials
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/MaterialResponse'
+
+    post:
+      tags:
+        - Materials
+      summary: Create new material
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/MaterialRequest'
+      responses:
+        '200':
+          description: Material created
+
+  /supplies:
+    get:
+      tags:
+        - Supplies
+      summary: List all supplies
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of supplies
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/SupplyResponse'
+
+    post:
+      tags:
+        - Supplies
+      summary: Create new supply
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/SupplyRequest'
+      responses:
+        '200':
+          description: Supply created
+
+definitions:
+  RegisterSupplierRequest:
+    type: object
+    properties:
+      login:
+        type: string
+      password:
+        type: string
+      confirmPassword:
+        type: string
+      email:
+        type: string
+
+  LoginSupplierRequest:
+    type: object
+    properties:
+      login:
+        type: string
+      password:
+        type: string
+
+  SupplierResponse:
+    type: object
+    properties:
+      id:
+        type: string
+      login:
+        type: string
+      email:
+        type: string
+
+  AuthSupplierResponse:
+    type: object
+    properties:
+      token:
+        type: string
+      supplier:
+        $ref: '#/definitions/SupplierResponse'
+
+  ModuleResponse:
+    type: object
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+      code:
+        type: string
+      price:
+        type: number
+      stockCount:
+        type: integer
+
+  ModuleRequest:
+    type: object
+    properties:
+      name:
+        type: string
+      code:
+        type: string
+      materials:
+        type: array
+        items:
+          $ref: '#/definitions/ModuleMaterialItem'
+
+  ModuleMaterialItem:
+    type: object
+    properties:
+      materialID:
+        type: string
+      count:
+        type: integer
+
+  MaterialResponse:
+    type: object
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+      code:
+        type: string
+      price:
+        type: number
+      stockCount:
+        type: integer
+
+  MaterialRequest:
+    type: object
+    properties:
+      name:
+        type: string
+      code:
+        type: string
+      price:
+        type: number
+      stockCount:
+        type: integer
+
+  SupplyResponse:
+    type: object
+    properties:
+      id:
+        type: string
+      supplierID:
+        type: string
+      code:
+        type: string
+      date:
+        type: string
+      price:
+        type: number
+
+  SupplyRequest:
+    type: object
+    properties:
+      code:
+        type: string
+      date:
+        type: string
+      materials:
+        type: array
+        items:
+          $ref: '#/definitions/SupplyMaterialItem'
+
+  SupplyMaterialItem:
+    type: object
+    properties:
+      materialID:
+        type: string
+      count:
+        type: integer
+
