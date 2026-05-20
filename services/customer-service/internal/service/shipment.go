@@ -7,11 +7,11 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/pepshot/SoftPlace/services/customer-service/internal/dto"
-	"github.com/pepshot/SoftPlace/services/customer-service/internal/helpers"
 	"github.com/pepshot/SoftPlace/services/customer-service/internal/mapper"
 	"github.com/pepshot/SoftPlace/services/customer-service/internal/model"
 	"github.com/pepshot/SoftPlace/services/customer-service/internal/model/relations"
 	"github.com/pepshot/SoftPlace/services/customer-service/internal/repository"
+	"github.com/pepshot/SoftPlace/shared/helpers"
 	"github.com/pepshot/SoftPlace/shared/logger"
 )
 
