@@ -66,7 +66,7 @@ func TestFurnitureRepositoryGetByID(t *testing.T) {
 	repo := newFurnitureRepository(t, mockPool)
 
 	item := sampleFurniture(uuid.New())
-	mockPool.ExpectQuery(sqlSelectFurniture).
+	mockPool.ExpectQuery(sqlSelectFurnitureByID).
 		WithArgs(item.ID).
 		WillReturnRows(furnitureRows(item))
 
@@ -83,7 +83,7 @@ func TestFurnitureRepositoryGetByIDNotFound(t *testing.T) {
 	repo := newFurnitureRepository(t, mockPool)
 
 	itemID := uuid.New()
-	mockPool.ExpectQuery(sqlSelectFurniture).
+	mockPool.ExpectQuery(sqlSelectFurnitureByID).
 		WithArgs(itemID).
 		WillReturnError(pgx.ErrNoRows)
 
@@ -99,7 +99,7 @@ func TestFurnitureRepositoryGetByIDQueryError(t *testing.T) {
 	repo := newFurnitureRepository(t, mockPool)
 
 	itemID := uuid.New()
-	mockPool.ExpectQuery(sqlSelectFurniture).
+	mockPool.ExpectQuery(sqlSelectFurnitureByID).
 		WithArgs(itemID).
 		WillReturnError(errors.New("query error"))
 

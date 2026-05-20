@@ -24,10 +24,11 @@ const (
 	sqlExistFromEmail  = "SELECT EXISTS(SELECT id FROM customers WHERE email = $1);"
 	sqlInsertCustomer  = "INSERT INTO customers"
 
-	sqlSelectFurniture   = "SELECT id, name, code, price, stock_count FROM furniture ORDER BY name;"
-	sqlIncreaseFurniture = "UPDATE furniture SET stock_count = stock_count + $2 WHERE id = $1;"
-	sqlDecreaseFurniture = "UPDATE furniture SET stock_count = stock_count - $2 WHERE id = $1 AND stock_count >= $2;"
-	sqlDeleteFurniture   = "DELETE FROM furniture"
+	sqlSelectFurniture     = "SELECT id, name, code, price, stock_count FROM furniture ORDER BY name;"
+	sqlSelectFurnitureByID = "SELECT id, name, code, price, stock_count FROM furniture WHERE id = $1;"
+	sqlIncreaseFurniture   = "UPDATE furniture SET stock_count = stock_count + $2 WHERE id = $1;"
+	sqlDecreaseFurniture   = "UPDATE furniture SET stock_count = stock_count - $2 WHERE id = $1 AND stock_count >= $2;"
+	sqlDeleteFurniture     = "DELETE FROM furniture"
 
 	sqlSelectFurnitureModule = "SELECT furniture_id, module_id, count FROM furniture_modules WHERE furniture_id = $1;"
 	sqlInsertFurnitureModule = "INSERT INTO furniture_modules"
@@ -62,8 +63,12 @@ func (m looseQueryMatcher) Match(expectedSQL, actualSQL string) error {
 	expectedSQL = strings.TrimSpace(expectedSQL)
 	expectedSQL = strings.ReplaceAll(expectedSQL, `\+`, `+`)
 	expectedSQL = strings.ReplaceAll(expectedSQL, "\n", " ")
+	expectedSQL = strings.ReplaceAll(expectedSQL, "\t", " ")
+	expectedSQL = strings.Join(strings.Fields(expectedSQL), " ")
 	actualSQL = strings.TrimSpace(actualSQL)
 	actualSQL = strings.ReplaceAll(actualSQL, "\n", " ")
+	actualSQL = strings.ReplaceAll(actualSQL, "\t", " ")
+	actualSQL = strings.Join(strings.Fields(actualSQL), " ")
 
 	if expectedSQL == actualSQL || strings.Contains(actualSQL, expectedSQL) {
 		return nil
