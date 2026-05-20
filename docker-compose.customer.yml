@@ -1,0 +1,38 @@
+services:
+  softplace-db:
+    image: postgres:16-alpine
+    container_name: softplace-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: softplace
+    ports:
+      - "5432:5432"
+    volumes:
+      - softplace-db-data:/var/lib/postgresql/data
+      - ./migrations:/migrations:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d softplace"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  customer-service:
+    build:
+      context: .
+      dockerfile: services/customer-service/Dockerfile
+    container_name: customer-service
+    env_file:
+      - configs/customer.docker.env
+    environment:
+      CONFIG_PATH: /app/configs/customer.docker.env
+    ports:
+      - "8442:8442"
+    depends_on:
+      softplace-db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  softplace-db-data:
+
