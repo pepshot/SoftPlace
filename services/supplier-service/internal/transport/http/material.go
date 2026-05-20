@@ -30,7 +30,7 @@ func (h *Handler) CreateMaterial(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"id": id.String()})
+	c.JSON(http.StatusCreated, gin.H{"id": id.String()})
 }
 
 func (h *Handler) GetMaterial(c *gin.Context) {

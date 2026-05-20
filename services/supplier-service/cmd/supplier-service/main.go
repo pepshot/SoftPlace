@@ -1,5 +1,13 @@
 package main
 
+// @title Supplier Service API
+// @version 1.0
+// @description Supplier service API
+// @BasePath /api/v1
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+
 import (
 	"context"
 	"errors"
@@ -22,6 +30,8 @@ import (
 	"github.com/pepshot/SoftPlace/shared/database"
 	"github.com/pepshot/SoftPlace/shared/logger"
 	"google.golang.org/grpc"
+
+	_ "github.com/pepshot/SoftPlace/services/supplier-service/docs"
 )
 
 func main() {

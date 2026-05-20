@@ -1,8 +1,10 @@
 package httpserver
 
 import (
+	"errors"
 	"net/http"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/pepshot/SoftPlace/services/supplier-service/internal/service"
 )
 
@@ -15,13 +17,15 @@ func mapServiceError(err error) int {
 	switch {
 	case err == nil:
 		return http.StatusOK
-	case err == service.ErrNotFound:
+	case errors.Is(err, service.ErrNotFound), errors.Is(err, pgx.ErrNoRows):
 		return http.StatusNotFound
-	case err == service.ErrInvalidID, err == service.ErrInvalidCount, err == service.ErrInvalidPrice, err == service.ErrInvalidComposition, err == service.ErrInvalidDate, err == service.ErrEmptyComposition, err == service.ErrPasswordMismatch, err == service.ErrInvalidCredentials:
+	case errors.Is(err, service.ErrInvalidID), errors.Is(err, service.ErrInvalidCount), errors.Is(err, service.ErrInvalidPrice),
+		errors.Is(err, service.ErrInvalidComposition), errors.Is(err, service.ErrInvalidDate), errors.Is(err, service.ErrEmptyComposition),
+		errors.Is(err, service.ErrPasswordMismatch):
 		return http.StatusBadRequest
-	case err == service.ErrNotEnoughStock:
-		return http.StatusPreconditionFailed
-	case err == service.ErrCodeAlreadyUsed, err == service.ErrLoginAlreadyUsed, err == service.ErrEmailAlreadyUsed:
+	case errors.Is(err, service.ErrInvalidCredentials):
+		return http.StatusUnauthorized
+	case errors.Is(err, service.ErrNotEnoughStock), errors.Is(err, service.ErrCodeAlreadyUsed), errors.Is(err, service.ErrLoginAlreadyUsed), errors.Is(err, service.ErrEmailAlreadyUsed):
 		return http.StatusConflict
 	default:
 		return http.StatusInternalServerError
